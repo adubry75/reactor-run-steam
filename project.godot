@@ -1,0 +1,27 @@
+; Engine configuration file.
+; Reactor Run, Godot 4.7 (.NET)
+
+config_version=5
+
+[application]
+
+config/name="Reactor Run"
+config/description="Fly in. Blow the core. Get out alive."
+run/main_scene="res://Main.tscn"
+config/features=PackedStringArray("4.7", "C#", "Forward Plus")
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+
+[dotnet]
+
+project/assembly_name="ReactorRun"
+
+[rendering]
+
+viewport/hdr_2d=true
+environment/defaults/default_clear_color=Color(0.0157, 0.0196, 0.0431, 1)
