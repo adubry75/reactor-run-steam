@@ -42,12 +42,12 @@ public sealed class StationPhase
     public StationPhase(Ctx c)
     {
         _c = c;
-        S = new Station(c.Tier, c.Run.Daily ? DailySeed() : null);
+        S = new Station(c.Tier, c.Run.Daily ? DailySeed() : null, c.Run.Final);
         _collapsed = new bool[S.N];
         _p = new Rect2(S.Ship.Position.X + S.Ship.Size.X + 12f, S.Ship.Position.Y + 40f - 23f, 14f, 22f);
         _fuel = MaxFuel;
         _cam = _p.GetCenter();
-        _alertMax = AlertSeconds(S.N, c.Tier);
+        _alertMax = AlertSeconds(S.N, c.Tier, c.Run.Final);
         c.Run.CrewInStation = S.CrewList.Count;
         c.Fx.Flash = 0.6f;
         c.Vega.Say("dock", true);
@@ -106,7 +106,7 @@ public sealed class StationPhase
     void OpenTerminal(Station.Terminal t)
     {
         t.Used = true;
-        var pool = Mods.Where(m => !_c.Run.Has(m.Key) && !(m.Key == "desperate" && _c.Run.Shield <= 1)).ToList();
+        var pool = Mods.Where(m => !_c.Run.Has(m.Key) && !(m.Key == "desperate" && _c.Run.Shield <= 1) && !(m.Key == "jammer" && _lock)).ToList();
         Rng.Shuffle(pool);
         var choices = pool.Take(3).ToList();
         if (choices.Count == 0) return;
@@ -282,7 +282,7 @@ public sealed class StationPhase
         foreach (var cr in S.Crates)
         {
             if (cr.Got) continue;
-            if (run.Has("magnet") && cr.Box.GetCenter().DistanceTo(pc) < 130f)
+            if (run.Has("magnet") && cr.Box.GetCenter().DistanceTo(pc) < 130f && S.LineOfSight(cr.Box.GetCenter(), pc))
                 cr.Box.Position += (pc - cr.Box.GetCenter()) * MathF.Min(1f, dt * 5f);
             if (!cr.Box.Intersects(_p)) continue;
             cr.Got = true;
@@ -385,7 +385,7 @@ public sealed class StationPhase
         if (_lock)
         {
             _droneT -= dt;
-            if (_droneT <= 0f && _drones.Count < DronesAlive(_c.Tier))
+            if (_droneT <= 0f && _drones.Count < DronesAlive(_c.Tier, _c.Run.Final))
             {
                 int pcell = S.CellOf(pc), px = pcell % S.Cols, py = pcell / S.Cols;
                 var pool = Enumerable.Range(0, S.N).Where(i => Math.Abs(i % S.Cols - px) + Math.Abs(i / S.Cols - py) >= 2 && !_collapsed[i]).ToList();
@@ -396,10 +396,10 @@ public sealed class StationPhase
                     _drones.Add(new Drone { P = at, Phase = Rng.Range(0f, 6f) });
                     _c.Fx.Burst(at, Hot, 12, 140f, 0.5f);
                 }
-                _droneT = DroneInterval(_c.Tier);
+                _droneT = DroneInterval(_c.Tier, _c.Run.Final);
             }
         }
-        float spd = DroneSpeed(_c.Tier) * (_c.Run.Has("ghost") ? 0.65f : 1f);
+        float spd = DroneSpeed(_c.Tier, _c.Run.Final) * (_c.Run.Has("ghost") ? 0.65f : 1f);
         foreach (var d in _drones)
         {
             if (d.Hp <= 0) continue;
@@ -589,13 +589,13 @@ public sealed class StationPhase
         }
         // fuel gauge
         float fr2 = _fuel / MaxFuel;
-        ci.DrawRect(new Rect2(16.5f, 42.5f, 96f, 6f), Dim, false, 1f);
-        ci.DrawRect(new Rect2(17f, 43f, 95f * fr2, 5f), fr2 < 0.25f ? Neon(Red, 1.4f) : Neon(Core, 1.4f));
-        ReactorRun.Draw.Text(ci, "FUEL", new Vector2(120f, 49f), 11, Dim);
+        ci.DrawRect(new Rect2(16.5f, 100.5f, 96f, 6f), Dim, false, 1f);
+        ci.DrawRect(new Rect2(17f, 101f, 95f * fr2, 5f), fr2 < 0.25f ? Neon(Red, 1.4f) : Neon(Core, 1.4f));
+        ReactorRun.Draw.Text(ci, "FUEL", new Vector2(120f, 107f), 11, Dim);
         // crew + power-ups
-        ReactorRun.Draw.Text(ci, $"CREW {_carried.Count}/{CrewCap} · {S.CrewList.Count} ABOARD STATION", new Vector2(size.X - 16f, 50f), 14, _carried.Count > 0 ? Loot : Dim, HorizontalAlignment.Right);
+        ReactorRun.Draw.Text(ci, $"CREW {_carried.Count}/{CrewCap} · {S.CrewList.Count(x => !x.Following)} ABOARD STATION", new Vector2(size.X - 16f, 54f), 14, _carried.Count > 0 ? Loot : Dim, HorizontalAlignment.Right);
         for (int i = 0; i < run.ModList.Count; i++)
-            ReactorRun.Draw.Text(ci, "+ " + run.ModList[i].Name, new Vector2(16f, 92f + i * 16f), 12, run.ModList[i].Cursed ? Hot : Loot);
+            ReactorRun.Draw.Text(ci, "+ " + run.ModList[i].Name, new Vector2(16f, 132f + i * 16f), 12, run.ModList[i].Cursed ? Hot : Loot);
         if (_c.Save.Level("scan") >= 3) DrawMinimap(ci);
         if (_prompt.Length > 0 && !run.Over)
         {

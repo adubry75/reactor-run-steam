@@ -36,6 +36,10 @@ public static class Config
     public const float ShotSpeed = 620f, ShotCooldown = 0.18f;
     public const float ViewHeight = 520f;
 
+    // ---------- campaign: destroy 24 stations (the 24th is the finale) with 3 ships ----------
+    public const int Stations = 24, Lives = 3;
+    public static float ScoreMul(int tier, bool final) => (1f + 0.1f * Math.Min(tier, Stations)) * (final ? 3f : 1f);
+
     // ---------- difficulty (tier = successful escapes) ----------
     public static int Tier(SaveData s) => s.Escapes;
     public static float Pace(int tier) => MathF.Max(0.55f, 1f - tier * 0.04f);
@@ -43,10 +47,10 @@ public static class Config
     public static int FightersNeeded(int tier) => Math.Min(20, 5 + 2 * tier);
     public static int FightersAlive(int tier) => Math.Min(7, 2 + tier / 2);
     public static float TurretChance(int tier) => 0.30f + 0.06f * Math.Min(8, tier);
-    public static float AlertSeconds(int cells, int tier) => MathF.Max(30f, 35f + cells * 1.5f - MathF.Min(15f, tier * 1.5f));
-    public static float DroneInterval(int tier) => MathF.Max(3.5f, 9f - tier * 0.4f);
-    public static int DronesAlive(int tier) => Math.Min(6, 2 + tier / 3);
-    public static float DroneSpeed(int tier) => 70f + 6f * Math.Min(10, tier);
+    public static float AlertSeconds(int cells, int tier, bool final = false) => final ? MathF.Max(25f, (35f + cells * 1.5f - MathF.Min(15f, tier * 1.5f)) * 0.6f) : MathF.Max(30f, 35f + cells * 1.5f - MathF.Min(15f, tier * 1.5f));
+    public static float DroneInterval(int tier, bool final = false) => MathF.Max(final ? 2.8f : 3.5f, 9f - tier * 0.4f);
+    public static int DronesAlive(int tier, bool final = false) => Math.Min(6, 2 + tier / 3 + (final ? 1 : 0));
+    public static float DroneSpeed(int tier, bool final = false) => 70f + 6f * Math.Min(10, tier) + (final ? 15f : 0f);
     public static float Fuse(int distance, int fuseLevel, bool overclock, bool unstable) =>
         (6f + distance * 2.6f + 1.5f * fuseLevel) * (overclock ? 0.65f : 1f) * (unstable ? 0.75f : 1f);
 

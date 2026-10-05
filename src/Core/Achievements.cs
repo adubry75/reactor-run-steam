@@ -32,7 +32,7 @@ public sealed class Achievements
         new("demolition", "Demolition Crew", "Destroy 100 turrets."),
         new("rescuer", "Search and Rescue", "Rescue 25 survivors."),
         new("veteran", "Veteran", "Escape 10 stations."),
-        new("wrangler", "Reactor Wrangler", "Escape 25 stations."),
+        new("wrangler", "Reactor Wrangler", "Destroy all 24 stations and win the campaign."),
         new("baron", "Salvage Baron", "Bank 5,000 salvage in total."),
         new("fully_loaded", "Fully Loaded", "Max out every hangar upgrade."),
         new("daily_driver", "Daily Driver", "Escape a Daily Run."),

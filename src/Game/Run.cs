@@ -24,6 +24,7 @@ public sealed class Run
 
     // achievement tracking
     public bool Daily;
+    public bool Final;   // station 24 of the campaign
     public bool TookDamage;
     public int StationShots;
     public float ArmedAfter = -1f;   // seconds from docking to arming

@@ -43,16 +43,30 @@ public sealed class FlyPhase
         return MathF.Abs(d) < 8f ? 0f : MathF.Sign(d);
     }
 
+    /// <summary>Picks a spawn height that keeps new fighters out of the player's face.</summary>
+    float SpawnY(float x)
+    {
+        float best = Rng.Range(90f, FlyWorldH - 90f), bd = new Vector2(x, best).DistanceTo(_ship);
+        for (int i = 0; i < 8 && bd < 260f; i++)
+        {
+            float y = Rng.Range(90f, FlyWorldH - 90f), d = new Vector2(x, y).DistanceTo(_ship);
+            if (d > bd) { best = y; bd = d; }
+        }
+        return best;
+    }
+
     public FlyPhase(Ctx c)
     {
         _c = c;
-        _need = FightersNeeded(c.Tier);
-        _maxAlive = FightersAlive(c.Tier);
+        _need = c.Run.Final ? 25 : FightersNeeded(c.Tier);
+        _maxAlive = c.Run.Final ? 8 : FightersAlive(c.Tier);
+        if (c.Run.Final) { c.Vega.Say("finalStart", true); c.Fx.Banner("FINAL STATION", Hot, $"Destroy {_need} fighters. Then end this.", 3f); return; }
         c.Vega.Say("runStart", true);
-        c.Fx.Banner($"DESTROY {_need} FIGHTERS", Hot, c.Save.HintOnce("fly") ? "That drops the docking shield. Space to fire." : "", 2.4f);
+        string sub = c.Save.HintOnce("fly") ? "That drops the docking shield. Space to fire." : c.Run.Daily ? "Daily Run" : $"Station {c.Run.Number} of {Stations}";
+        c.Fx.Banner($"DESTROY {_need} FIGHTERS", Hot, sub, 2.4f);
     }
 
-    public MusicState Music => _docking > 0 ? MusicState.Explore : MusicState.Fight;
+    public MusicState Music => _c.Run.Over ? MusicState.None : _docking > 0 ? MusicState.Explore : MusicState.Fight;
 
     Kind PickType()
     {
@@ -131,7 +145,7 @@ public sealed class FlyPhase
         if (remaining > _enemies.Count && _enemies.Count < _maxAlive && _spawnT <= 0f)
         {
             var type = PickType(); var st = Stats(type);
-            float x = MathF.Min(_camX + viewW + 60f, StationX - 50f), y = Rng.Range(90f, FlyWorldH - 90f);
+            float x = MathF.Min(_camX + viewW + 60f, StationX - 50f), y = SpawnY(x);
             _enemies.Add(new Enemy { Type = type, Hp = st.hp, P = new Vector2(x, y), BaseY = y, Vx = -Rng.Range(st.s0, st.s1), Phase = Rng.Range(0f, 6f), Fire = Rng.Range(1f, 2.2f) });
             _spawnT = Rng.Range(0.6f, 1.4f) * Pace(_c.Tier);
             if (x < _camX + viewW) _c.Fx.Burst(new Vector2(x, y), Hot, 8, 120f, 0.4f);
@@ -142,7 +156,7 @@ public sealed class FlyPhase
             e.P.X += e.Vx * dt;
             if (e.Type == Kind.Diver) { e.BaseY += Mathf.Clamp(_ship.Y - e.BaseY, -1f, 1f) * 120f * dt; e.P.Y = e.BaseY + MathF.Sin(_t * 5f + e.Phase) * 14f; }
             else e.P.Y = e.BaseY + MathF.Sin(_t * (e.Type == Kind.Gunship ? 1f : 2f) + e.Phase) * (e.Type == Kind.Gunship ? 30f : 60f);
-            if (e.P.X < _camX - 80f) { e.P.X = MathF.Min(_camX + viewW + 60f, StationX - 50f); e.BaseY = Rng.Range(90f, FlyWorldH - 90f); }
+            if (e.P.X < _camX - 80f) { e.P.X = MathF.Min(_camX + viewW + 60f, StationX - 50f); e.BaseY = SpawnY(e.P.X); }
             e.Fire -= dt;
             if (e.Fire <= 0f && e.P.X < _camX + viewW && e.P.X > _camX)
             {
@@ -161,7 +175,7 @@ public sealed class FlyPhase
                     if (--e.Hp <= 0) e.Dead = true;
                 }
             }
-            if (!e.Dead && _ship.DistanceTo(e.P) < st.r + 6f) { e.Dead = true; _c.Hurt(_ship); }
+            if (!e.Dead && _c.Run.Invulnerable <= 0f && _ship.DistanceTo(e.P) < st.r + 6f) { e.Dead = true; _c.Hurt(_ship); }
             if (e.Dead)
             {
                 _killed++; _c.Run.Salvage += st.val;

@@ -26,6 +26,36 @@ public sealed class SaveData
     public int DailyBest { get; set; }
     public int DailyTries { get; set; }
 
+    // campaign
+    public int TotalScore { get; set; }
+    public int Lives { get; set; } = Config.Lives;
+    public int BestStation { get; set; }
+    public int Wins { get; set; }
+    public string Initials { get; set; } = "";
+    public List<BoardEntry> CampaignScores { get; set; } = new();
+    public List<BoardEntry> StationScores { get; set; } = new();
+    public int StationNo => System.Math.Min(Config.Stations, Escapes + 1);
+    public bool FinaleNext => Escapes >= Config.Stations - 1;
+
+    /// <summary>Adds an entry to a local top 10 (by score). Returns its rank (1-based) or 0 if it didn't place.</summary>
+    public static int AddBoard(List<BoardEntry> list, BoardEntry e)
+    {
+        list.Add(e);
+        list.Sort((a, b) => b.Score.CompareTo(a.Score));
+        if (list.Count > 10) list.RemoveRange(10, list.Count - 10);
+        return list.IndexOf(e) + 1;
+    }
+
+    public static bool Qualifies(List<BoardEntry> list, int score) => score > 0 && (list == null || list.Count < 10 || score > list[^1].Score);
+
+    /// <summary>Starts a fresh 24-station campaign. Keeps settings, achievements, lifetime stats, top 10s and the daily run.</summary>
+    public void NewCampaign()
+    {
+        Salvage = 0; Up.Clear(); Runs = 0; Escapes = 0; Best = 0; BestLeft = null; CrewTotal = 0;
+        TotalScore = 0; Lives = Config.Lives;
+        Save();
+    }
+
     // settings
     public float MusicVolume { get; set; } = 0.8f;
     public float SfxVolume { get; set; } = 0.9f;
@@ -83,8 +113,19 @@ public sealed class SaveData
     {
         Salvage = 0; Up.Clear(); Runs = 0; Escapes = 0; Best = 0; BestLeft = null; CrewTotal = 0; Hints.Clear();
         Achievements.Clear(); Stats.Clear(); Scores.Clear(); DailyDate = ""; DailyBest = 0; DailyTries = 0;
+        TotalScore = 0; Lives = Config.Lives; BestStation = 0; Wins = 0; CampaignScores.Clear(); StationScores.Clear();
         Save();
     }
+}
+
+public sealed class BoardEntry
+{
+    public string Id { get; set; } = "";
+    public string Name { get; set; } = "";
+    public int Score { get; set; }
+    public int Station { get; set; }
+    public int Crew { get; set; }
+    public string Date { get; set; } = "";
 }
 
 public sealed class ScoreEntry

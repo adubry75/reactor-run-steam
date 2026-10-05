@@ -36,7 +36,7 @@ public sealed class Station
     void Shuffle<T>(IList<T> l) { for (int i = l.Count - 1; i > 0; i--) { int j = _r.Next(i + 1); (l[i], l[j]) = (l[j], l[i]); } }
 
     /// <summary>Builds a station. Pass a seed for a reproducible layout (Daily Run).</summary>
-    public Station(int tier, int? seed = null)
+    public Station(int tier, int? seed = null, bool final = false)
     {
         _r = seed.HasValue ? new System.Random(seed.Value) : new System.Random();
         (Cols, Rows) = StationSize(tier);
@@ -98,7 +98,7 @@ public sealed class Station
 
         var others = Enumerable.Range(0, N).Where(i => i != Start && i != Reactor && !deadEnds.Contains(i)).ToList();
         var de = deadEnds.ToList(); Shuffle(de); Shuffle(others);
-        int crewCount = System.Math.Min(4, 1 + N / 7);
+        int crewCount = final ? 4 : System.Math.Min(4, 1 + N / 7);
         var crewCells = de.Concat(others).Take(crewCount).ToList();
         foreach (var c in crewCells) CrewList.Add(new Crew { Box = new Rect2(CellX(c) + 2.5f * Tile, FloorY(c) - 22, 12, 22), Cell = c });
 
@@ -107,7 +107,7 @@ public sealed class Station
         foreach (var c in termPool.Take(termCount))
             Terminals.Add(new Terminal { Box = new Rect2(CellX(c) + 6 * Tile - 14, CellY(c) + CellH * Tile / 2f - 4, 28, 34), Cell = c });
 
-        float tc = TurretChance(tier);
+        float tc = TurretChance(tier) + (final ? 0.15f : 0f);
         for (int i = 0; i < N; i++)
         {
             if (i == Start || dS[i] < 2 || F() > tc) continue;

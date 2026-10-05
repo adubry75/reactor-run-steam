@@ -74,7 +74,8 @@ public sealed class Menu
         bool sel = index == Selected;
         var r = it.Rect;
         var col = it.Enabled ? it.Accent : Dim;
-        ci.DrawRect(r, Alpha(col, sel ? 0.16f : 0.05f));
+        ci.DrawRect(r, new Color(0.02f, 0.035f, 0.07f, 0.94f)); // near-opaque base so background lines don't show through
+        ci.DrawRect(r, Alpha(col, sel ? 0.18f : 0.08f));
         ci.DrawRect(r, sel ? Neon(col, 1.6f) : Alpha(col, 0.5f), false, sel ? 2f : 1f);
         if (sel) ci.DrawRect(new Rect2(r.Position.X, r.Position.Y, 3f, r.Size.Y), Neon(col, 1.8f));
         float ty = r.Position.Y + (string.IsNullOrEmpty(it.Sub) ? r.Size.Y / 2f + 6f : 22f);
