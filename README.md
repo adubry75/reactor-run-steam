@@ -28,3 +28,9 @@ It saves a screenshot of each stage to the user data folder as `autotest_*.png`,
 - Top 10s: campaign total and best single station, on this PC and online (shared with the web version via
   `https://dubry.com/games/ReactorRun/scores.php`; set `RR_SCORES_URL` to point elsewhere).
 - `godot --path . -- --campaigntest` plays through ship lost, game over + initials, final station and victory.
+
+## Cheats (testing)
+Type `CHEAT` on the title or hangar screen to unlock (type it again to turn them off). Then:
+F1 god mode · F2 skip ahead (dogfight -> station, station -> instant escape) · F3 +1000 salvage ·
+F4 skip a station (hangar) · F5 jump to the final station (hangar) · F6 refill ships.
+Using any cheat marks the campaign, and its scores stay off the top 10s. `-- --cheattest` runs a scripted check.

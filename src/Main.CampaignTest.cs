@@ -48,3 +48,28 @@ public partial class Main
         while (_ctStep < steps.Length && _ctT >= steps[_ctStep].at) { steps[_ctStep].act(); _ctStep++; }
     }
 }
+
+public partial class Main
+{
+    bool _chtest; float _chT; int _chStep;
+    void SendKey(Godot.Key k, char ch = (char)0) => HandleCheatKey(new InputEventKey { Keycode = k, Pressed = true, Unicode = ch });
+    void CheatTest(float dt)
+    {
+        _chT += dt;
+        void Log(string tag) => GD.Print($"[cheat] {tag}: screen={_screen} unlocked={_c.Save.CheatsUnlocked} cheated={_c.Save.Cheated} god={_c.God} escapes={_c.Save.Escapes} salvage={_c.Save.Salvage} lives={_c.Save.Lives} total={_c.Save.TotalScore} head={_debrief?.Head} extra={_debrief?.Extra} initials={_debrief?.Initials} stationTop={_c.Save.StationScores.Count}");
+        (float at, System.Action act)[] steps =
+        {
+            (0.2f, () => { _c.Save.NoPersist = true; _c.Save.ResetProgress(); ShowHangar(); }),
+            (0.5f, () => { foreach (var ch in "cheat") SendKey(Godot.Key.A, ch); Log("typed CHEAT"); }),
+            (0.8f, () => Shot("ch_unlocked")),
+            (1.0f, () => { SendKey(Godot.Key.F3); SendKey(Godot.Key.F4); SendKey(Godot.Key.F4); Log("F3 F4 F4"); }),
+            (1.2f, () => { StartRun(false); SendKey(Godot.Key.F1); }),
+            (1.6f, () => { _c.Hurt(Vector2.Zero); _c.Hurt(Vector2.Zero); Log($"god hurt shield={_c.Run.Shield}"); SendKey(Godot.Key.F2); Log("F2 in fly"); }),
+            (2.6f, () => { Shot("ch_station"); SendKey(Godot.Key.F2); }),
+            (7.0f, () => { Log("after escape"); Shot("ch_debrief"); }),
+            (7.2f, () => { ShowHangar(); SendKey(Godot.Key.F5); SendKey(Godot.Key.F6); Log("F5 F6"); }),
+            (7.4f, () => GetTree().Quit()),
+        };
+        while (_chStep < steps.Length && _chT >= steps[_chStep].at) { steps[_chStep].act(); _chStep++; }
+    }
+}

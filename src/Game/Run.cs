@@ -49,8 +49,11 @@ public sealed class Ctx
     public const int DailyTier = 5;
     public int Tier => Run != null && Run.Daily ? DailyTier : Config.Tier(Save);
 
+    public bool God;   // cheat: no damage, no death
+
     public void Hurt(Vector2 at)
     {
+        if (God) return;
         if (Run.Invulnerable > 0f || Run.Over) return;
         Run.Shield--;
         Run.TookDamage = true;
@@ -64,6 +67,7 @@ public sealed class Ctx
 
     public void Die(string reason, Vector2 at)
     {
+        if (God) return;
         if (Run.Over) return;
         Run.Over = true; Run.Won = false; Run.Reason = reason; Run.OverT = 0f;
         Fx.Shake = 22f; Fx.Flash = 0.8f;

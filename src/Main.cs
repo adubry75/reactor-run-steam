@@ -44,6 +44,7 @@ public partial class Main : Node2D
     readonly List<string> _pendingAch = new();
     WorldEnvironment _env;
     OnlineBoard _online;
+    string _cheatBuf = "";
     bool _typed; // a letter was typed into the initials this frame (letters also fire WASD/P nav actions)
     ColorRect _crt;
 
@@ -85,6 +86,7 @@ public partial class Main : Node2D
         ShowTitle();
         _autotest = System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--autotest") >= 0;
         _ctest = System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--campaigntest") >= 0;
+        _chtest = System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--cheattest") >= 0;
         StartShowcase(OS.GetCmdlineUserArgs());
     }
 
@@ -438,6 +440,14 @@ public partial class Main : Node2D
         save.Best = Math.Max(save.Best, banked);
         if (d.CampaignOver) save.NewCampaign(); else save.Save();
 
+        if (save.Cheated && !run.Daily)
+        {
+            d.Submit.Clear();
+            if (d.LocalStation != null) save.StationScores.Remove(d.LocalStation);
+            if (d.LocalCampaign != null) save.CampaignScores.Remove(d.LocalCampaign);
+            d.LocalStation = null; d.LocalCampaign = null;
+            d.Extra = "CHEATS USED: this campaign's scores stay off the top 10s";
+        }
         if (d.Submit.Count > 0)
         {
             d.Initials = true;
@@ -453,6 +463,45 @@ public partial class Main : Node2D
         _menu.Clear();
         if (d.CampaignOver) _menu.Add("Continue", ShowTitle, accent: Core);
         else _menu.Add("Back to hangar", ShowHangar, accent: Core);
+    }
+
+    // ------------------------------------------------------------------ cheats (testing)
+    // Type CHEAT on the title or hangar screen to unlock, then:
+    // F1 god mode · F2 skip ahead (dogfight -> station, station -> escape) · F3 +1000 salvage
+    // F4 skip a station (hangar) · F5 jump to the final station (hangar) · F6 refill ships.
+    // Any cheat marks the campaign: its scores never go on the top 10s.
+    bool HandleCheatKey(InputEventKey k)
+    {
+        var save = _c.Save;
+        if (_screen is Screen.Title or Screen.Hangar && k.Unicode > 0 && char.IsAsciiLetter((char)k.Unicode))
+        {
+            _cheatBuf = (_cheatBuf + char.ToUpperInvariant((char)k.Unicode));
+            if (_cheatBuf.Length > 5) _cheatBuf = _cheatBuf[^5..];
+            if (_cheatBuf == "CHEAT")
+            {
+                _cheatBuf = "";
+                save.CheatsUnlocked = !save.CheatsUnlocked; save.Save();
+                _c.Fx.Banner(save.CheatsUnlocked ? "CHEATS UNLOCKED" : "CHEATS OFF", Hot, save.CheatsUnlocked ? "F1 god · F2 skip ahead · F3 salvage · F4 skip station · F5 final · F6 ships" : "", 4f);
+                _c.Sfx.Play("win");
+            }
+            return false;
+        }
+        if (!save.CheatsUnlocked || _overlay != Overlay.None) return false;
+        bool used = true;
+        switch (k.Keycode)
+        {
+            case Key.F1: _c.God = !_c.God; _c.Fx.Banner(_c.God ? "GOD MODE ON" : "GOD MODE OFF", Hot, "", 1.5f); break;
+            case Key.F2 when _screen == Screen.Fly && !_c.Run.Over: _station = new StationPhase(_c); _screen = Screen.Station; break;
+            case Key.F2 when _screen == Screen.Station && _station.PendingChoices == null: _station.CheatEscape(); break;
+            case Key.F3: save.Salvage += 1000; save.Save(); if (_screen == Screen.Hangar) BuildHangarMenu(_menu.Selected); _c.Fx.Banner("+1000 SALVAGE", Loot, "", 1.2f); break;
+            case Key.F4 when _screen == Screen.Hangar && !save.FinaleNext: save.Escapes++; save.Save(); BuildHangarMenu(_menu.Selected); _c.Fx.Banner($"SKIPPED TO STATION {save.StationNo}", Hot, "", 1.2f); break;
+            case Key.F5 when _screen == Screen.Hangar: save.Escapes = Stations - 1; save.Save(); BuildHangarMenu(_menu.Selected); _c.Fx.Banner("FINAL STATION NEXT", Hot, "", 1.2f); break;
+            case Key.F6: save.Lives = Lives; save.Save(); if (_screen == Screen.Hangar) BuildHangarMenu(_menu.Selected); _c.Fx.Banner("SHIPS REFILLED", Line, "", 1.2f); break;
+            default: used = false; break;
+        }
+        if (used && !save.Cheated) { save.Cheated = true; save.Save(); }
+        if (used) _c.Sfx.Play("tick", 0.6f);
+        return used;
     }
 
     // ------------------------------------------------------------------ top 10 initials
@@ -535,6 +584,7 @@ public partial class Main : Node2D
 
         if (_autotest) AutoTest(dt);
         if (_ctest) CampaignTest(dt);
+        if (_chtest) CheatTest(dt);
         if (_show != Showcase.None) UpdateShowcase(dt);
         if (_overlay != Overlay.None) UpdateOverlay();
         else UpdateScreen(dt);
@@ -640,6 +690,7 @@ public partial class Main : Node2D
 
     public override void _Input(InputEvent @event)
     {
+        if (@event is InputEventKey ck && ck.Pressed && !ck.Echo && HandleCheatKey(ck)) { GetViewport().SetInputAsHandled(); return; }
         if (_screen == Screen.Debrief && _debrief != null && _debrief.Initials && !_debrief.Sending && CountUpDone(_debrief)
             && @event is InputEventKey k && k.Pressed && !k.Echo && k.Unicode > 0)
         {
@@ -668,7 +719,7 @@ public partial class Main : Node2D
             case Screen.Outro: _outro.Draw(this); break;
             case Screen.Debrief: HangarScene.Draw(this, _c, PanelW); DrawDebriefPanel(); break;
         }
-        if (_screen is Screen.Fly or Screen.Station or Screen.Outro or Screen.Hangar) _c.Fx.DrawScreen(this, size);
+        if (_screen is Screen.Fly or Screen.Station or Screen.Outro or Screen.Hangar or Screen.Title) _c.Fx.DrawScreen(this, size);
         _c.Vega.Draw(this, size, _c.Clock);
         switch (_overlay)
         {
@@ -704,6 +755,7 @@ public partial class Main : Node2D
         }
         ReactorRun.Draw.Text(this, $"SALVAGE {run.Salvage}{(run.Mult > 1 ? " x2" : "")}", new Vector2(16f, 80f), 14, Loot);
         float rx = _c.Size.X - 16f;
+        if (save.Cheated || _c.God) ReactorRun.Draw.Text(this, _c.God ? "CHEATS · GOD" : "CHEATS", new Vector2(_c.Size.X / 2f, _c.Size.Y - 14f), 12, Hot, HorizontalAlignment.Center);
         if (run.Daily) { ReactorRun.Draw.Text(this, $"DAILY RUN · {Today}", new Vector2(rx, 30f), 14, Hot, HorizontalAlignment.Right); return; }
         float sx = DrawShips(new Vector2(rx, 25f), save.Lives, true);
         string label = run.Final ? $"FINAL STATION · {Stations} / {Stations}   SHIPS" : $"STATION {run.Number} / {Stations}   SHIPS";

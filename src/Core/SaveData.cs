@@ -32,6 +32,8 @@ public sealed class SaveData
     public int BestStation { get; set; }
     public int Wins { get; set; }
     public string Initials { get; set; } = "";
+    public bool CheatsUnlocked { get; set; }   // typed CHEAT on the title or hangar screen
+    public bool Cheated { get; set; }          // this campaign used a cheat: its scores stay off the top 10s
     public List<BoardEntry> CampaignScores { get; set; } = new();
     public List<BoardEntry> StationScores { get; set; } = new();
     public int StationNo => System.Math.Min(Config.Stations, Escapes + 1);
@@ -52,7 +54,7 @@ public sealed class SaveData
     public void NewCampaign()
     {
         Salvage = 0; Up.Clear(); Runs = 0; Escapes = 0; Best = 0; BestLeft = null; CrewTotal = 0;
-        TotalScore = 0; Lives = Config.Lives;
+        TotalScore = 0; Lives = Config.Lives; Cheated = false;
         Save();
     }
 

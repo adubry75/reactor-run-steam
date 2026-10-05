@@ -121,6 +121,16 @@ public sealed class StationPhase
 
     // ------------------------------------------------------------------ autotest hooks
     internal void DebugWarp(Vector2 center) { _p.Position = center - _p.Size / 2f; _v = Vector2.Zero; _cam = center; }
+    /// <summary>Cheat: escape right now with whatever you're carrying.</summary>
+    internal void CheatEscape()
+    {
+        var run = _c.Run;
+        if (run.Over) return;
+        run.Salvage += 200;
+        run.Over = true; run.Won = true; run.TimeLeft = Rng.Range(1.5f, 4f); run.OverT = 0f; run.CrewCarried = _carried.Count;
+        _c.Sfx.Play("win");
+    }
+
     internal void DebugOpenTerminal() { if (S.Terminals.Count > 0) OpenTerminal(S.Terminals[0]); }
     internal void DebugArm(bool overclock) { if (!Armed) Arm(overclock); }
     internal void DebugLockdown() => Lockdown();
